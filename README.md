@@ -8,4 +8,10 @@ to patch :<br>
 &nbsp;  cd tcc<br>
 &nbsp;  patch -p0 < ../tccbrlnd.patch<br>
   
- 
+after build:<br>
+copy folder tcc/win32/include into build folder i.e: Win64/Debug<br>
+
+run:<br>
+cd Win64/Debug<br>
+tcc -run -D_WIN -luser32 hello.c
+
