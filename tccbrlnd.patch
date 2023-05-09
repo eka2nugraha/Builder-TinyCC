@@ -1,0 +1,101 @@
+diff -Nau ../tcc-0.9.27/config.h ./config.h
+--- ../tcc-0.9.27/config.h	1970-01-01 07:00:00.000000000 +0700
++++ ./config.h	2023-05-08 08:16:48.711286500 +0700
+@@ -0,0 +1,6 @@
++#define TCC_VERSION "0.9.27"
++#ifdef TCC_TARGET_X86_64
++#define TCC_LIBTCC1 "libtcc1-64.a"
++#else
++#define TCC_LIBTCC1 "libtcc1-32.a"
++#endif
+diff -Nau ../tcc-0.9.27/elf.h ./elf.h
+--- ../tcc-0.9.27/elf.h	2017-12-17 15:27:05.000000000 +0700
++++ ./elf.h	2023-05-08 08:16:48.711286500 +0700
+@@ -24,7 +24,9 @@
+ #else
+ #ifndef __int8_t_defined
+ #define __int8_t_defined
++#if !defined(__BORLANDC__)
+ typedef signed char int8_t;
++#endif
+ typedef short int int16_t;
+ typedef int int32_t;
+ typedef long long int int64_t;
+Common subdirectories: ../tcc-0.9.27/examples and ./examples
+Common subdirectories: ../tcc-0.9.27/include and ./include
+Common subdirectories: ../tcc-0.9.27/lib and ./lib
+diff -Nau ../tcc-0.9.27/tcc.h ./tcc.h
+--- ../tcc-0.9.27/tcc.h	2017-12-17 15:27:05.000000000 +0700
++++ ./tcc.h	2023-05-08 08:16:48.711286500 +0700
+@@ -58,9 +58,11 @@
+ # ifndef __GNUC__
+ #  define strtold (long double)strtod
+ #  define strtof (float)strtod
++# if !defined(__BORLANDC__)
+ #  define strtoll _strtoi64
+ #  define strtoull _strtoui64
+ # endif
++# endif
+ # ifdef LIBTCC_AS_DLL
+ #  define LIBTCCAPI __declspec(dllexport)
+ #  define PUB_FUNC LIBTCCAPI
+diff -Nau ../tcc-0.9.27/tccelf.c ./tccelf.c
+--- ../tcc-0.9.27/tccelf.c	2017-12-17 15:27:05.000000000 +0700
++++ ./tccelf.c	2023-05-08 08:16:48.726930800 +0700
+@@ -171,7 +171,7 @@
+             && ELFW(ST_BIND)(sym->st_info) == STB_LOCAL)
+             sym->st_info = ELFW(ST_INFO)(STB_GLOBAL, ELFW(ST_TYPE)(sym->st_info));
+         tr[i] = set_elf_sym(s, sym->st_value, sym->st_size, sym->st_info,
+-            sym->st_other, sym->st_shndx, s->link->data + sym->st_name);
++            sym->st_other, sym->st_shndx, (char*)s->link->data + sym->st_name);
+     }
+     /* now update relocations */
+     for (i = 1; i < s1->nb_sections; i++) {
+diff -Nau ../tcc-0.9.27/tccpp.c ./tccpp.c
+--- ../tcc-0.9.27/tccpp.c	2017-12-17 15:27:05.000000000 +0700
++++ ./tccpp.c	2023-05-08 08:16:48.742554200 +0700
+@@ -1418,7 +1418,7 @@
+         return;
+     if (0 != --s->run_test)
+         return;
+-    fprintf(s->ppfp, "\n[%s]\n" + !(s->dflag & 32), p), fflush(s->ppfp);
++    fprintf(s->ppfp, &"\n[%s]\n"[!(s->dflag & 32)], p), fflush(s->ppfp);
+     define_push(tok, MACRO_OBJ, NULL, NULL);
+ }
+ 
+@@ -3720,7 +3720,7 @@
+ 	TOK_GET(&t, &str, &cval);
+ 	if (!t)
+ 	    break;
+-	fprintf(fp, " %s" + s, get_tok_str(t, &cval)), s = 1;
++	fprintf(fp, &" %s"[s], get_tok_str(t, &cval)), s = 1;
+     }
+     fprintf(fp, "\n");
+ }
+diff -Nau ../tcc-0.9.27/tcctools.c ./tcctools.c
+--- ../tcc-0.9.27/tcctools.c	2017-12-17 15:27:05.000000000 +0700
++++ ./tcctools.c	2023-05-08 08:16:48.742554200 +0700
+@@ -470,10 +470,17 @@
+     for (p = argv; *p; ++p)
+         if (strchr(*p, '"'))
+             *p = str_replace(*p, "\"", "\\\"");
+-    ret = _spawnvp(P_NOWAIT, prog, (const char *const*)argv);
+-    if (-1 == ret)
+-        return ret;
+-    _cwait(&ret, ret, WAIT_CHILD);
++#if defined(__BORLANDC__)
++	ret = spawnvp(P_NOWAIT, prog, (char *const*)argv);
++	if (-1 == ret)
++		return ret;
++	cwait(&ret, ret, WAIT_CHILD);
++#else
++	ret = _spawnvp(P_NOWAIT, prog, (const char *const*)argv);
++	if (-1 == ret)
++		return ret;
++	_cwait(&ret, ret, WAIT_CHILD);
++#endif
+     exit(ret);
+ }
+ #define execvp execvp_win32
+Common subdirectories: ../tcc-0.9.27/tests and ./tests
+Common subdirectories: ../tcc-0.9.27/win32 and ./win32
